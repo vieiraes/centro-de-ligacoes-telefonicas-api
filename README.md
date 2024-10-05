@@ -1,4 +1,4 @@
-# Telefone API
+# Centro de Ligações 
 
 Uma API para gerenciar pessoas e seus números de telefone, utilizando Fastify e Prisma com um banco de dados PostgreSQL. Esta API permite criar, listar e gerenciar telefones associados a cada pessoa, além de suportar a exclusão lógica.
 
