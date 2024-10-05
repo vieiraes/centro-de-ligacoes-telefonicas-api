@@ -153,14 +153,6 @@ Response
     "deletedPerson": { ... }
 }
 ```
-
 ## Licença
 
 Este projeto está licenciado sob a MIT License. Veja o arquivo LICENSE para mais detalhes.
-
-
-
-
-
-
-
