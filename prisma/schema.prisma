@@ -3,35 +3,32 @@
 
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
-model Pessoa {
-  id            BigInt  @id @default(autoincrement())
-  nome          String
-  telefone      String  @unique
-  email         String? @unique
-  status        String  @default("possivel lead")
-  classificacao String  @default("interessado")
-
-  atendimentos Atendimentos[]
+datasource db {
+  provider = "postgresql" // O provedor do banco de dados
+  url      = env("DATABASE_URL") // Sua URL do banco de dados
 }
 
-model Atendimentos {
-  id            BigInt   @id @default(autoincrement())
-  pessoaId      BigInt
-  dataLigacao   DateTime @default(now())
-  atendente     String
-  statusLigacao String
-  classificacao String   @default("nao atendeu")
+model Persons {
+  person_id  String    @id @default(cuid())
+  name       String
+  tax_id     String    @unique @db.VarChar(11) // Adicionado para o CPF, com restrição de 11 caracteres
+  phones     Phones[] // Relacionamento com telefones
+  created_at DateTime  @default(now()) // Data de criação
+  deleted_at DateTime? // Data de deleção (opcional)
+}
 
-  pessoa Pessoa @relation(fields: [pessoaId], references: [id])
+model Phones {
+  phone_id     String    @id @default(cuid()) // Usando CUID como identificador único
+  area         String    @db.Char(2) // Area deve ter exatamente 2 caracteres
+  phone_number String
+  person_id    String // Chave estrangeira que referencia Persons
+  person       Persons   @relation(fields: [person_id], references: [person_id])
+  created_at   DateTime  @default(now()) // Data de criação
+  deleted_at   DateTime? // Data de deleção (opcional)
 
-  @@index([pessoaId])
+  @@unique([phone_number, person_id]) // Garante que um número de telefone não possa ser cadastrado mais de uma vez para a mesma pessoa
 }
