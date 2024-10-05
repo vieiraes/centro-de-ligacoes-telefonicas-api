@@ -1,7 +1,7 @@
 {
   "name": "telefonia-api",
   "version": "1.0.0",
-  "description": "Api de controle de resgistro de chamadas",
+  "description": "Api de controle de registro de ligações",
   "main": "index.js",
     "scripts": {
     "dev": "tsx watch src/server.ts",

@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "Persons" ADD COLUMN     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "deleted_at" TIMESTAMP(3);
+
+-- AlterTable
+ALTER TABLE "Phones" ADD COLUMN     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "deleted_at" TIMESTAMP(3);
