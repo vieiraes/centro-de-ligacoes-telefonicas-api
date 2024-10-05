@@ -1,10 +1,12 @@
 import fastify from "fastify";
 import personRoutes from "./routes/personRoutes";
+import trimStringMiddleware from "./middlewares/trimStringMiddleware"
+
 
 const app = fastify();
 
 // Registrar rotas
-app.register(personRoutes);
+app.register(personRoutes, trimStringMiddleware);
 
 app.listen({
     host: "0.0.0.0",

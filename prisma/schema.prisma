@@ -29,6 +29,4 @@ model Phones {
   person       Persons   @relation(fields: [person_id], references: [person_id])
   created_at   DateTime  @default(now()) // Data de criação
   deleted_at   DateTime? // Data de deleção (opcional)
-
-  @@unique([phone_number, person_id]) // Garante que um número de telefone não possa ser cadastrado mais de uma vez para a mesma pessoa
 }
