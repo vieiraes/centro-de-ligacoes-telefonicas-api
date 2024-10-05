@@ -113,5 +113,6 @@ export const deletePerson = async (request, reply) => {
         where: { person_id: personId },
         data: { deleted_at: new Date() }
     });
-    return reply.status(200).send({ message: 'Pessoa deletada logicamente.', deletedPerson });
+    return reply.status(200).send({
+        message: 'Register logcally deleted. ', deletedPerson });
 };

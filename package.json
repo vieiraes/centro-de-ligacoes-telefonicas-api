@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Api de controle de registro de ligações",
   "main": "index.js",
+  "engines": {
+    "node": "20.18.0"
+  },
     "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsup src",
