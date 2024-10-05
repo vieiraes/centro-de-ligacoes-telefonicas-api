@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  postgres_svc:
+    image: postgres:latest
+    volumes:
+      - postgres-volume:/var/lib/postgresql/data
+    networks:
+      - postgres_svc_network
+    container_name: postgres-atendimentoapi
+    hostname: postgres-atendimentoapi
+    restart: always
+    deploy:
+      mode: global
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.localhost == localhost
+
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres-volume:
+
+networks:
+  postgres_svc_network:
+    driver: bridge
+    attachable: true
