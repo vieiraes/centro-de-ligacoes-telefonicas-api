@@ -114,5 +114,17 @@ export const deletePerson = async (request, reply) => {
         data: { deleted_at: new Date() }
     });
     return reply.status(200).send({
-        message: 'Register logcally deleted. ', deletedPerson });
+        message: 'Register logcally deleted. ', deletedPerson
+    });
 };
+
+
+export const getPersonId = async (request, reply) => {
+    const { personId } = request.params;
+
+    const person = await prisma.persons.findUnique({
+        where: { person_id: personId }
+    });
+
+    return reply.status(200).send(person)
+}
