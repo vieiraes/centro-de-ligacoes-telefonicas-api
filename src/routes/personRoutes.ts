@@ -10,11 +10,11 @@ import {
 } from '../controllers/personController';
 
 const personRoutes: FastifyPluginAsync = async (fastify) => {
-    fastify.get('/persons', { preHandler: authEmailMiddleware }, getPersons); // Adicionando o middleware
+    fastify.get('/persons', { preHandler: authEmailMiddleware }, getPersons);
     fastify.post('/persons', { preHandler: authEmailMiddleware },createPerson);
     fastify.post('/persons/:personId/phones', { preHandler: authEmailMiddleware }, addPhonesToPerson);
     fastify.delete('/persons/:personId', { preHandler: authEmailMiddleware }, deletePerson);
-    fastify.get('/persons/:id', { preHandler: authEmailMiddleware }, getPersonId); // Adicionando o middleware
+    fastify.get('/persons/:personId', { preHandler: authEmailMiddleware }, getPersonId); 
 };
 
 export default personRoutes;

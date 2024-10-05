@@ -119,12 +119,43 @@ export const deletePerson = async (request, reply) => {
 };
 
 
+// Função para obter uma pessoa pelo ID
 export const getPersonId = async (request, reply) => {
     const { personId } = request.params;
 
+    // Busca a pessoa no banco de dados
     const person = await prisma.persons.findUnique({
-        where: { person_id: personId }
+        where: { person_id: personId },
+        include: {
+            phones: { // Incluindo os telefones associados à pessoa
+                select: { // Selecionar apenas os campos necessários dos telefones
+                    phone_id: true,
+                    area: true,
+                    phone_number: true,
+                    created_at: true,
+                    deleted_at: true // Incluindo campo deleted_at nos telefones
+                }
+            }
+        }
     });
 
-    return reply.status(200).send(person)
-}
+    // Verifica se a pessoa foi encontrada
+    if (!person) {
+        return reply.status(404).send({ message: 'Person not found' }); // Retorna 404 se não encontrar
+    }
+
+    // Responde com os dados da pessoa
+    return reply.status(200).send({
+        person_id: person.person_id,
+        name: person.name,
+        tax_id: person.tax_id,
+        created_at: person.created_at,
+        phones: person.phones.map(phone => ({
+            phone_id: phone.phone_id,
+            area: phone.area,
+            phone_number: phone.phone_number,
+            created_at: phone.created_at,
+            deleted_at: phone.deleted_at
+        }))
+    });
+};
