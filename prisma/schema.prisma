@@ -1,32 +1,59 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql" // O provedor do banco de dados
-  url      = env("DATABASE_URL") // Sua URL do banco de dados
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-model Persons {
-  person_id  String    @id @default(cuid())
+model Person {
+  personId   String    @id @default(cuid())
   name       String
-  tax_id     String    @unique @db.VarChar(11) // Adicionado para o CPF, com restrição de 11 caracteres
-  phones     Phones[] // Relacionamento com telefones
-  created_at DateTime  @default(now()) // Data de criação
-  deleted_at DateTime? // Data de deleção (opcional)
+  taxId      String    @unique @db.VarChar(11) // Added for CPF, with a restriction of 11 characters
+  phones     Phone[]   // Relationship with phones
+  createdAt  DateTime  @default(now()) // Creation date
+  deletedAt  DateTime? // Deletion date (optional)
 }
 
-model Phones {
-  phone_id     String    @id @default(cuid()) // Usando CUID como identificador único
-  area         String    @db.Char(2) // Area deve ter exatamente 2 caracteres
-  phone_number String
-  person_id    String // Chave estrangeira que referencia Persons
-  person       Persons   @relation(fields: [person_id], references: [person_id])
-  created_at   DateTime  @default(now()) // Data de criação
-  deleted_at   DateTime? // Data de deleção (opcional)
+model Phone {
+  phoneId     String    @id @default(cuid()) // Using CUID as unique identifier
+  area        String    @db.Char(2) // Area must have exactly 2 characters
+  phoneNumber String
+  personId    String    // Foreign key referencing Person
+  person      Person    @relation(fields: [personId], references: [personId])
+  createdAt   DateTime  @default(now()) // Creation date
+  deletedAt   DateTime? // Deletion date (optional)
+  calls       Call[]    // Relationship with calls
+}
+
+model Attendant {
+  attendantId String     @id @default(cuid())
+  name        String
+  isOnline    Boolean    @default(false) // Indica se o atendente está online
+  calls       Call[]     // Relationship with calls
+  createdAt   DateTime   @default(now()) // Creation date
+  deletedAt   DateTime?  // Deletion date (optional)
+}
+
+model Call {
+  callId       String        @id @default(cuid()) // Unique identifier for the call
+  startTime    DateTime      // Start time of the call
+  endTime      DateTime      // End time of the call
+  phoneId      String        // Foreign key referencing Phone
+  attendantId  String        // Foreign key referencing Attendant
+  status       CallStatus    // Status of the call
+  phone        Phone         @relation(fields: [phoneId], references: [phoneId])
+  attendant    Attendant     @relation(fields: [attendantId], references: [attendantId])
+}
+enum CallStatus {
+  QUEUED      // A chamada está agendada ou pendente
+  IN_PROGRESS  // A chamada está atualmente em andamento
+  COMPLETED    // A chamada foi realizada com sucesso
+  MISSED       // A chamada não foi atendida ou foi perdida
+  NOT_COMPLETED // A chamada falhou por algum motivo (por exemplo, chamada não completada)
+  CANCELED     // A chamada foi cancelada antes que pudesse ser realizada
 }
