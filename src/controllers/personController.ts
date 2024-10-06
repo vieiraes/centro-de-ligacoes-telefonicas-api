@@ -1,161 +1,219 @@
 import prisma from "../database/prismaClient";
 import { ZPersonSchema } from "../schemas/personSchema";
 import { ZPhonesArraySchema } from "../schemas/phoneSchema";
+import { formatErrorResponse } from "../handlers/errorHandler"
 
 // Função para listar pessoas
 export const getPersons = async (request, reply) => {
-    const personsWithPhones = await prisma.persons.findMany({
-        include: {
-            phones: {
-                select: { // Selecionar apenas os campos que queremos
-                    phone_id: true,
-                    area: true,
-                    phone_number: true,
-                    person_id: true,
-                    created_at: true,
-                    deleted_at: true // Incluindo /campo created_at nos telefones
+    try {
+        const personsWithPhones = await prisma.person.findMany({
+            include: {
+                phones: {
+                    select: {
+                        phoneId: true,
+                        area: true,
+                        phoneNumber: true,
+                        createdAt: true,
+                        deletedAt: true,
+                    }
                 }
             }
+        });
+
+        if (personsWithPhones.length === 0) {
+            return reply.status(404).send({ message: 'No person found' });
         }
-    });
 
-    const formattedResponse = personsWithPhones.map(person => ({
-        person_id: person.person_id,
-        name: person.name,
-        tax_id: person.tax_id,
-        created_at: person.created_at, // Incluindo created_at da pessoa
-        phones: person.phones.map(phone => ({
-            phone_id: phone.phone_id,
-            area: phone.area,
-            phone_number: phone.phone_number,
-            person_id: phone.person_id,
-            created_at: phone.created_at,
-            deleted_at: phone.deleted_at // Incluindo created_at do telefone
-        }))
-    }));
+        const formattedResponse = personsWithPhones.map(person => ({
+            personId: person.personId,
+            name: person.name,
+            taxId: person.taxId,
+            createdAt: person.createdAt,
+            deletedAt: person.deletedAt,
+            phones: person.phones.map(phone => ({
+                phoneId: phone.phoneId,
+                area: phone.area,
+                phoneNumber: phone.phoneNumber,
+            }))
+        }));
 
-    return reply.status(200).send(formattedResponse);
+        return reply.status(200).send(formattedResponse);
+    } catch (error) {
+        console.error(error);
+        return reply.status(500).send({ message: 'Internal Server Error' });
+    }
 };
 
 // Função para criar uma nova pessoa
 export const createPerson = async (request, reply) => {
     const parseResult = ZPersonSchema.safeParse(request.body);
+
     if (!parseResult.success) {
         console.error(parseResult.error);
-        return reply.status(400).send(parseResult.error);
+        return reply.status(400).send(formatErrorResponse(parseResult.error)); // Formata a resposta de erro
     }
-    const { name, tax_id, phones } = parseResult.data;
 
-    const returnData = await prisma.persons.create({
+    const { name, taxId, phones } = parseResult.data;
+
+    // Validação para permitir até 5 números de telefone e checar duplicatas
+    if (phones.length > 5) {
+        return reply.status(400).send({ error: "Você pode adicionar no máximo 5 números de telefone." });
+    }
+
+    const uniquePhones = new Set();
+    const validPhones = [];
+    const duplicatePhones = [];
+
+    for (const phone of phones) {
+        if (uniquePhones.has(phone.phoneNumber)) {
+            duplicatePhones.push(phone.phoneNumber);
+        } else {
+            uniquePhones.add(phone.phoneNumber);
+            validPhones.push({
+                area: phone.area,
+                phoneNumber: phone.phoneNumber
+            });
+        }
+    }
+
+    if (duplicatePhones.length > 0) {
+        return reply.status(400).send({ error: "The following numbers are duplicated: " + duplicatePhones.join(", ") });
+    }
+
+    const returnData = await prisma.person.create({
         data: {
             name,
-            tax_id,
+            taxId,
             phones: {
-                create: phones.map(phone => ({
-                    area: phone.area,
-                    phone_number: phone.phone_number
-                }))
+                create: validPhones
             }
         },
         include: { phones: true }
     });
+
     return reply.status(201).send(returnData);
 };
 
 // Função para adicionar telefones a uma pessoa
 export const addPhonesToPerson = async (request, reply) => {
     const parseResult = ZPhonesArraySchema.safeParse(request.body);
+
     if (!parseResult.success) {
-        return reply.status(400).send(parseResult.error);
+        console.error(parseResult.error);
+        return reply.status(400).send(formatErrorResponse(parseResult.error)); // Formata a resposta de erro
     }
+
     const { phones } = parseResult.data;
     const personId = request.params.personId;
 
-
-    // Filtrar telefones existentes para verificar unicidade
-    const existingPhones = await prisma.phones.findMany({
-        where: { person_id: personId },
-        select: { phone_number: true } // Apenas obtenha o número do telefone
+    const existingPhones = await prisma.phone.findMany({
+        where: { personId: personId },
+        select: { phoneNumber: true }
     });
-    const existingPhoneNumbers = new Set(existingPhones.map(phone => phone.phone_number));
 
+    const existingPhoneNumbers = new Set(existingPhones.map(phone => phone.phoneNumber));
 
     const phonesToInsert = [];
-
     for (const phone of phones) {
-        // Verificar se o telefone já existe para a pessoa
-        if (!existingPhoneNumbers.has(phone.phone_number)) {
+        if (!existingPhoneNumbers.has(phone.phoneNumber)) {
             phonesToInsert.push({
                 area: phone.area,
-                phone_number: phone.phone_number,
-                person_id: personId // Associar ao personId
+                phoneNumber: phone.phoneNumber
             });
         }
     }
 
-    // Insere os telefones que não existem ainda
-    if (phonesToInsert.length > 0) {
-        await prisma.phones.createMany({
-            data: phonesToInsert,
-            skipDuplicates: true // Ignora se houver algumas duplicatas devido a outra verificação
+    const insertedPhones = [];
+    for (const phone of phonesToInsert) {
+        const insertedPhone = await prisma.phone.create({
+            data: {
+                area: phone.area,
+                phoneNumber: phone.phoneNumber,
+                personId: personId
+            }
         });
+        insertedPhones.push(insertedPhone);
     }
-    return reply.status(201).send({
-        message: 'Telefones adicionados com sucesso.',
-        phonesToInsert
-    });
+
+    return reply.status(201).send({ phonesNumbers: insertedPhones });
 };
 
 // Função para deletar uma pessoa logicamente
 export const deletePerson = async (request, reply) => {
     const { personId } = request.params;
-    const deletedPerson = await prisma.persons.update({
-        where: { person_id: personId },
-        data: { deleted_at: new Date() }
-    });
-    return reply.status(200).send({
-        message: 'Register logcally deleted. ', deletedPerson
-    });
-};
 
+    try {
+        // Busca a pessoa para verificar se já foi deletada
+        const person = await prisma.person.findUnique({
+            where: { personId: personId },
+            select: { deletedAt: true } // Somente selecionando o campo deletedAt
+        });
+
+        if (!person) {
+            return reply.status(404).send({ message: 'Person not found' }); // Se a pessoa não existir
+        }
+
+        if (person.deletedAt) {
+            // Se já foi deletada anteriormente
+            return reply.status(400).send({ message: 'The record has already been deleted previously.' });
+        }
+
+        // Soft delete
+        const deletedPerson = await prisma.person.update({
+            where: { personId: personId },
+            data: { deletedAt: new Date() }
+        });
+
+        return reply.status(200).send({
+            message: 'Register logically deleted.',
+            deletedPerson
+        });
+    } catch (error) {
+        console.error(error);
+        return reply.status(500).send({ message: 'Internal Server Error' });
+    }
+};
 
 // Função para obter uma pessoa pelo ID
 export const getPersonId = async (request, reply) => {
     const { personId } = request.params;
 
-    // Busca a pessoa no banco de dados
-    const person = await prisma.persons.findUnique({
-        where: { person_id: personId },
-        include: {
-            phones: { // Incluindo os telefones associados à pessoa
-                select: { // Selecionar apenas os campos necessários dos telefones
-                    phone_id: true,
-                    area: true,
-                    phone_number: true,
-                    created_at: true,
-                    deleted_at: true // Incluindo campo deleted_at nos telefones
+    try {
+        const person = await prisma.person.findUnique({
+            where: { personId: personId },
+            include: {
+                phones: {
+                    select: {
+                        phoneId: true,
+                        area: true,
+                        phoneNumber: true,
+                        createdAt: true,
+                        deletedAt: true
+                    }
                 }
             }
+        });
+
+        if (!person) {
+            return reply.status(404).send({ message: 'Person not found' });
         }
-    });
 
-    // Verifica se a pessoa foi encontrada
-    if (!person) {
-        return reply.status(404).send({ message: 'Person not found' }); // Retorna 404 se não encontrar
+        return reply.status(200).send({
+            personId: person.personId,
+            name: person.name,
+            taxId: person.taxId,
+            createdAt: person.createdAt,
+            deletedAt: person.deletedAt,
+            phones: person.phones.map(phone => ({
+                phoneId: phone.phoneId,
+                area: phone.area,
+                phoneNumber: phone.phoneNumber,
+                createdAt: phone.createdAt,
+                deletedAt: phone.deletedAt
+            }))
+        });
+    } catch (error) {
+        console.error(error);
+        return reply.status(500).send({ message: 'Internal Server Error' });
     }
-
-    // Responde com os dados da pessoa
-    return reply.status(200).send({
-        person_id: person.person_id,
-        name: person.name,
-        tax_id: person.tax_id,
-        created_at: person.created_at,
-        phones: person.phones.map(phone => ({
-            phone_id: phone.phone_id,
-            area: phone.area,
-            phone_number: phone.phone_number,
-            created_at: phone.created_at,
-            deleted_at: phone.deleted_at
-        }))
-    });
 };
