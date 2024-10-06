@@ -6,8 +6,8 @@
   "engines": {
     "node": "20.18.0"
   },
-    "scripts": {
-    "dev": "npx prisma migrate dev && tsx watch src/server.ts",
+  "scripts": {
+    "dev": "npx prisma migrate dev && npx tsx watch src/server.ts",
     "build": "tsup src",
     "start": "node dist/server.js"
   },

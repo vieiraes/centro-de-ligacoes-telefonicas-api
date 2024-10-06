@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-        "target": "es2020", /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
+        "target": "ES2022", /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
         "module": "CommonJS", /* Specify what module code is generated. */
         "allowJs": true, /* Allow JavaScript files to be a part of your program. Use the 'checkJS' option to get errors from these files. */
         "checkJs": true, /* Enable error reporting in type-checked JavaScript files. */
@@ -17,7 +17,7 @@
         "experimentalDecorators": true,
         "allowSyntheticDefaultImports": true,
         "baseUrl": "./",
-        "incremental": true,
+        "incremental": false,
         "strictNullChecks": false,
         "strictBindCallApply": false,
         "forceConsistentCasingInFileNames": false,
