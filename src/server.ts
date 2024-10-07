@@ -1,6 +1,7 @@
 import fastify from "fastify";
 import personRoutes from "./routes/personRoutes";
-import phoneRoutes from "./routes/phoneRoutes"; // Importar as rotas do Phone
+import phoneRoutes from "./routes/phoneRoutes";
+import attendantRoutes from "./routes/attendantRoutes";
 import trimStringMiddleware from "./middlewares/trimStringMiddleware"
 
 
@@ -8,6 +9,7 @@ const app = fastify();
 
 // Registrar rotas
 app.register(personRoutes);
+app.register(attendantRoutes);
 app.register(phoneRoutes);
 app.register(trimStringMiddleware);
 

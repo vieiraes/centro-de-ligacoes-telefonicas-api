@@ -1,7 +1,7 @@
 import prisma from "../database/prismaClient";
 import { ZPersonSchema } from "../schemas/personSchema";
 import { ZPhonesArraySchema } from "../schemas/phoneSchema";
-import { formatErrorResponse } from "../handlers/errorHandler"
+import { formatErrorResponse } from "../handlers/errorHandler";
 
 // Função para listar pessoas
 export const getPersons = async (request, reply) => {
