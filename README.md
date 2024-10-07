@@ -70,7 +70,7 @@ A API estará disponível em ```http://localhost:3355```
 
 ## Endpoints
 
-Download [**Collection Postman**](https://www.postman.com/appleads-qg/workspace/appleads-qg/collection/20418848-5964e0fd-e8df-4b45-9880-97ab8d0ba41d?action=share&source=copy-link&creator=20418848)
+Documentação do produto [**Collection Postman**](https://documenter.getpostman.com/view/20418848/2sAXxP9CH6)
 
 ## Licença
 
