@@ -1,21 +1,5 @@
-/*
-  Warnings:
-
-  - You are about to drop the `Persons` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `Phones` table. If the table is not empty, all the data it contains will be lost.
-
-*/
 -- CreateEnum
-CREATE TYPE "CallStatus" AS ENUM ('QUEUED', 'IN_PROGRESS', 'COMPLETED', 'MISSED', 'NOT_COMPLETED', 'CANCELED');
-
--- DropForeignKey
-ALTER TABLE "Phones" DROP CONSTRAINT "Phones_person_id_fkey";
-
--- DropTable
-DROP TABLE "Persons";
-
--- DropTable
-DROP TABLE "Phones";
+CREATE TYPE "CallStatus" AS ENUM ('PENDING', 'QUEUED', 'IN_PROGRESS', 'COMPLETED', 'MISSED', 'NOT_COMPLETED', 'CANCELED');
 
 -- CreateTable
 CREATE TABLE "Person" (
@@ -44,6 +28,9 @@ CREATE TABLE "Phone" (
 CREATE TABLE "Attendant" (
     "attendantId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
+    "isOnline" BOOLEAN NOT NULL DEFAULT false,
+    "tokenId" TEXT,
+    "tokenExpiresAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deletedAt" TIMESTAMP(3),
 

@@ -2,13 +2,16 @@ import { FastifyPluginAsync } from 'fastify';
 import {
     searchPhoneNumber,
     deletePhone,
-    getCallsByPhoneId
+    getCallsByPhoneId,
+    getAllPhones
 } from '../controllers/phoneControler';
 
 const phoneRoutes: FastifyPluginAsync = async (fastify) => {
-    fastify.get('/phones/search', searchPhoneNumber); // Rota para pesquisar número de telefone
-    fastify.delete('/phones/:phoneId', deletePhone); // Rota para deletar telefone por phoneId
-    fastify.get('/phones/:phoneId/calls', getCallsByPhoneId); // Rota para obter chamadas por phoneId
+    fastify.get('/phones/search', searchPhoneNumber); 
+    fastify.delete('/phones/:phoneId', deletePhone);
+    fastify.get('/phones/:phoneId/calls', getCallsByPhoneId);
+    fastify.get('/phones', getAllPhones);
+
 };
 
 export default phoneRoutes;

@@ -1,8 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
-
 import prisma from "../database/prismaClient";
 import { ZAttendantSchema } from "../schemas/attendantSchema";
-import { formatErrorResponse } from "../handlers/errorHandler";
+import { formatErrorResponseHandler } from "../handlers/errorHandler";
+import { CallStatusENUM } from 'src/schemas/callStatus';
 
 // Função para listar atendentes
 export const getAttendants = async (request, reply) => {
@@ -13,7 +13,8 @@ export const getAttendants = async (request, reply) => {
             return reply.status(404).send({ message: 'No attendants found' });
         }
 
-        return reply.status(200).send(attendants.map(attendant => ({
+        // Criação de estrutura de dados organizada
+        const structuredData = attendants.map(attendant => ({
             attendantId: attendant.attendantId,
             name: attendant.name,
             isOnline: attendant.isOnline,
@@ -21,7 +22,9 @@ export const getAttendants = async (request, reply) => {
             deletedAt: attendant.deletedAt,
             tokenId: attendant.tokenId,
             tokenExpiresAt: attendant.tokenExpiresAt,
-        })));
+        }));
+
+        return reply.status(200).send(structuredData); // Retorna a estrutura organizada
     } catch (error) {
         console.error(error);
         return reply.status(500).send({ message: 'Internal Server Error' });
@@ -34,35 +37,33 @@ export const createAttendant = async (request, reply) => {
 
     if (!parseResult.success) {
         console.error(parseResult.error);
-        return reply.status(400).send(formatErrorResponse(parseResult.error));
+        return reply.status(400).send(formatErrorResponseHandler(parseResult.error));
     }
 
     const { name, isOnline } = parseResult.data;
 
-    const returnData = await prisma.attendant.create({
+    const structuredData = await prisma.attendant.create({
         data: {
             name,
             isOnline
         }
     });
 
-    return reply.status(201).send(returnData);
+    return reply.status(201).send(structuredData);
 };
 
 // Função para deletar um atendente logicamente
 export const softDeleteAttendant = async (request, reply) => {
-    const { attendantId } = request.params; // Tente receber normalmente em produção
-    
-    // Validação do ID
+    const { attendantId } = request.params;
+
     if (!attendantId || typeof attendantId !== 'string') {
         return reply.status(400).send({ message: 'Invalid attendant ID' });
     }
 
     try {
-        // Busca o atendente para verificar se já foi deletado
         const attendant = await prisma.attendant.findUnique({
-            where: { attendantId: attendantId },
-            select: { deletedAt: true }
+            where: { attendantId },
+            select: { deletedAt: true, name: true, isOnline: true } // Seleciona campos adicionais que você pode querer retornar
         });
 
         if (!attendant) {
@@ -73,15 +74,22 @@ export const softDeleteAttendant = async (request, reply) => {
             return reply.status(400).send({ message: 'The record has already been deleted previously.' });
         }
 
-        // Soft delete
         const deletedAttendant = await prisma.attendant.update({
-            where: { attendantId: attendantId },
+            where: { attendantId },
             data: { deletedAt: new Date() }
         });
 
+        // Prepare a estrutura de retorno
+        const structuredData = {
+            attendantId: deletedAttendant.attendantId,
+            name: deletedAttendant.name,
+            isOnline: deletedAttendant.isOnline,
+            deletedAt: deletedAttendant.deletedAt
+        };
+
         return reply.status(200).send({
             message: 'Register logically deleted.',
-            deletedAttendant
+            deletedAttendant: structuredData
         });
     } catch (error) {
         console.error(error);
@@ -91,20 +99,18 @@ export const softDeleteAttendant = async (request, reply) => {
 
 // Função para atualizar dados de um atendente
 export const patchAttendant = async (request, reply) => {
-    const { attendantId } = request.params; // Obter o ID da URL
-    const parseResult = ZAttendantSchema.partial().safeParse(request.body); // Aceita campos opcionalmente
+    const { attendantId } = request.params;
+    const parseResult = ZAttendantSchema.partial().safeParse(request.body);
 
     if (!parseResult.success) {
         console.error(parseResult.error);
-        return reply.status(400).send(formatErrorResponse(parseResult.error));
+        return reply.status(400).send(formatErrorResponseHandler(parseResult.error));
     }
 
-    // Verifique se o ID está sendo enviado no corpo da requisição
     if (parseResult.data.attendantId && parseResult.data.attendantId !== attendantId) {
         return reply.status(400).send({ message: 'Attendant ID cannot be changed.' });
     }
 
-    // Verifique se tokenId e tokenExpiresAt estão sendo enviados
     if (parseResult.data.tokenId) {
         return reply.status(400).send({ message: 'Token ID cannot be changed.' });
     }
@@ -120,16 +126,25 @@ export const patchAttendant = async (request, reply) => {
     }
 
     try {
-        // Atualiza o atendente, garantindo que o attendantId, tokenId e tokenExpiresAt não sejam alterados
         const updatedAttendant = await prisma.attendant.update({
-            where: { attendantId: attendantId },
+            where: { attendantId },
             data: {
-                name: parseResult.data.name, // Atualiza apenas os campos permitidos
+                name: parseResult.data.name,
                 isOnline: parseResult.data.isOnline,
-            }, // Note que não estamos incluindo tokenId e tokenExpiresAt aqui
+            },
         });
 
-        return reply.status(200).send(updatedAttendant);
+        // Retorno estruturado
+        const structuredData = {
+            attendantId: updatedAttendant.attendantId,
+            name: updatedAttendant.name,
+            isOnline: updatedAttendant.isOnline,
+            tokenId: updatedAttendant.tokenId,
+            tokenExpiresAt: updatedAttendant.tokenExpiresAt,
+            deletedAt: updatedAttendant.deletedAt // Caso você deseje retornar também
+        };
+
+        return reply.status(200).send(structuredData);
     } catch (error) {
         console.error(error);
         return reply.status(500).send({ message: 'Internal Server Error' });
@@ -139,26 +154,21 @@ export const patchAttendant = async (request, reply) => {
 // Função para gerar um novo token para um atendente
 export const generateToken = async (request, reply) => {
     const { attendantId } = request.params;
-    
+
     try {
-        // Verifica se o atendente existe
         const attendant = await prisma.attendant.findUnique({
             where: { attendantId },
-            select: { tokenId: true, tokenExpiresAt: true }
+            select: { tokenId: true, tokenExpiresAt: true, attendantId: true } // Inclua attendantId para a resposta
         });
 
         if (!attendant) {
             return reply.status(404).send({ message: 'Attendant not found' });
         }
 
-        // Gera um novo UUID para tokenId
         const newTokenId = uuidv4();
-        
-        // Define a data de expiração para 24 horas a partir de agora
         const now = new Date();
         const tokenExpiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 horas
 
-        // Atualiza o atendente com o novo tokenId e tokenExpiresAt
         const updatedAttendant = await prisma.attendant.update({
             where: { attendantId },
             data: {
@@ -167,12 +177,14 @@ export const generateToken = async (request, reply) => {
             }
         });
 
-        return reply.status(200).send({
+        // Retorno estruturado
+        const structuredData = {
             attendantId: updatedAttendant.attendantId,
             tokenId: updatedAttendant.tokenId,
             tokenExpiresAt: updatedAttendant.tokenExpiresAt
-        });
+        };
 
+        return reply.status(200).send(structuredData);
     } catch (error) {
         console.error(error);
         return reply.status(500).send({ message: 'Internal Server Error' });
@@ -184,17 +196,15 @@ export const getAttendantId = async (request, reply) => {
     const { attendantId } = request.params;
 
     try {
-        // Busca o atendente e inclui seu histórico de chamadas
         const attendant = await prisma.attendant.findUnique({
             where: { attendantId },
             include: {
-                calls: { // Supõe-se que você tenha uma relação chamada 'calls' no modelo Attendant
+                calls: { // Inclui histórico de chamadas
                     select: {
                         callId: true,
                         startTime: true,
                         endTime: true,
                         status: true,
-                        // Inclua outros campos que deseja retornar
                     }
                 }
             }
@@ -204,14 +214,59 @@ export const getAttendantId = async (request, reply) => {
             return reply.status(404).send({ message: 'Attendant not found' });
         }
 
-        return reply.status(200).send({
+        // Estrutura de dados a ser retornada
+        const structuredData = {
             attendantId: attendant.attendantId,
             name: attendant.name,
             isOnline: attendant.isOnline,
             tokenId: attendant.tokenId,
             tokenExpiresAt: attendant.tokenExpiresAt,
-            calls: attendant.calls // Retorna o histórico de chamadas
+            calls: attendant.calls // Inclui o histórico de chamadas
+        };
+
+        return reply.status(200).send(structuredData);
+    } catch (error) {
+        console.error(error);
+        return reply.status(500).send({ message: 'Internal Server Error' });
+    }
+};
+
+
+// Função para listar todas as chamadas de um atendente específico filtradas por status
+export const listCallsByStatus = async (request, reply) => {
+    const { attendantId } = request.params;
+    const { status } = request.query; // O status a partir dos parâmetros de consulta
+
+    try {
+        const whereConditions = { attendantId: attendantId };
+
+        // Validação simplificada do status usando o enum
+        if (status && !(status in CallStatusENUM)) {
+            return reply.status(400).send({ message: 'Invalid call status.' });
+        }
+
+        if (status) {
+            whereConditions.status = status; // Filtra pelo status fornecido
+        }
+
+        const calls = await prisma.call.findMany({
+            where: whereConditions,
+            include: { phone: true } // Inclui referências ao telefone se necessário
         });
+
+        if (calls.length === 0) {
+            return reply.status(404).send({ message: 'No calls found for this attendant.' });
+        }
+
+        const structuredData = calls.map(call => ({
+            callId: call.callId,
+            startTime: call.startTime,
+            endTime: call.endTime,
+            status: call.status,
+            phoneId: call.phoneId,
+        }));
+
+        return reply.status(200).send(structuredData);
     } catch (error) {
         console.error(error);
         return reply.status(500).send({ message: 'Internal Server Error' });
