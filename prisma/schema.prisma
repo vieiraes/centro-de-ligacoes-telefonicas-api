@@ -53,6 +53,7 @@ model Call {
 }
 
 enum CallStatus {
+  PENDING // A chamada foi criada, mas ainda não foi iniciada
   QUEUED // A chamada está agendada ou pendente
   IN_PROGRESS // A chamada está atualmente em andamento
   COMPLETED // A chamada foi realizada com sucesso

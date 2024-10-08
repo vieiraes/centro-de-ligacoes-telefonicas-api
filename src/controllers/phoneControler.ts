@@ -1,24 +1,39 @@
 import prisma from "../database/prismaClient";
 import { ZPhonesArraySchema } from "../schemas/phoneSchema";
 
-// Função para pesquisar telefones por number
+// Função para pesquisar telefones por número
 export const searchPhoneNumber = async (request, reply) => {
-    const { phoneNumber } = request.query; // Supondo que você vai passar o phoneNumber como query param
+    const { phoneNumber } = request.query;
 
     if (!phoneNumber) {
         return reply.status(400).send({ message: 'Phone number is required.' });
     }
 
-    const phones = await prisma.phone.findMany({
-        where: { phoneNumber: phoneNumber },
-        include: { person: true } // Incluindo as pessoas associadas ao telefone
-    });
+    try {
+        const phones = await prisma.phone.findMany({
+            where: { phoneNumber: phoneNumber },
+            include: { person: true } // Incluindo as pessoas associadas ao telefone
+        });
 
-    if (phones.length === 0) {
-        return reply.status(404).send({ message: 'No phone number found.' });
+        if (phones.length === 0) {
+            return reply.status(404).send({ message: 'No phone number found.' });
+        }
+
+        // Estrutura de dados organizada
+        const structuredData = phones.map(phone => ({
+            phoneId: phone.phoneId,
+            area: phone.area,
+            phoneNumber: phone.phoneNumber,
+            createdAt: phone.createdAt,
+            deletedAt: phone.deletedAt,
+            person: phone.person // Inclui as informações da pessoa associada
+        }));
+
+        return reply.status(200).send(structuredData); // Retorna a estrutura organizada
+    } catch (error) {
+        console.error(error);
+        return reply.status(500).send({ message: 'Internal Server Error' });
     }
-
-    return reply.status(200).send(phones);
 };
 
 // Função para deletar um phone pelo phoneId
@@ -33,7 +48,7 @@ export const deletePhone = async (request, reply) => {
         });
 
         if (!phone) {
-            return reply.status(404).send({ message: 'Phone not found.' });
+            return reply.status(404).send({ message: 'phoneId not found.' });
         }
 
         // Delete apenas o telefone
@@ -41,10 +56,16 @@ export const deletePhone = async (request, reply) => {
             where: { phoneId: phoneId }
         });
 
-        return reply.status(200).send({
+        // Estrutura de dados organizada
+        const structuredData = {
             message: 'Phone number deleted successfully.',
-            deletedPhone
-        });
+            phoneId: deletedPhone.phoneId,
+            area: deletedPhone.area,
+            phoneNumber: deletedPhone.phoneNumber,
+            deletedAt: new Date(), // Adiciona a data de deleção
+        };
+
+        return reply.status(200).send(structuredData); // Retorna a estrutura organizada
     } catch (error) {
         console.error(error);
         return reply.status(500).send({ message: 'Internal Server Error' });
@@ -62,15 +83,47 @@ export const getCallsByPhoneId = async (request, reply) => {
         });
 
         if (!phone) {
-            return reply.status(404).send({ message: 'Phone not found.' });
+            return reply.status(404).send({ message: 'phoneId not found.' });
         }
 
-        return reply.status(200).send({
+        // Estrutura de dados organizada
+        const structuredData = {
             phoneId: phone.phoneId,
             area: phone.area,
             phoneNumber: phone.phoneNumber,
-            calls: phone.calls
+            calls: phone.calls // Inclui o histórico de chamadas
+        };
+
+        return reply.status(200).send(structuredData); // Retorna a estrutura organizada
+    } catch (error) {
+        console.error(error);
+        return reply.status(500).send({ message: 'Internal Server Error' });
+    }
+};
+
+
+// Função para listar todos os telefones
+export const getAllPhones = async (request, reply) => {
+    try {
+        const phones = await prisma.phone.findMany({
+            include: { person: true } // Inclui as pessoas associadas aos telefones
         });
+
+        if (phones.length === 0) {
+            return reply.status(404).send({ message: 'No phones found.' });
+        }
+
+        // Estrutura de dados organizada
+        const structuredData = phones.map(phone => ({
+            phoneId: phone.phoneId,
+            area: phone.area,
+            phoneNumber: phone.phoneNumber,
+            createdAt: phone.createdAt,
+            deletedAt: phone.deletedAt,
+            person: phone.person // Inclui informações da pessoa associada
+        }));
+
+        return reply.status(200).send(structuredData); // Retorna a estrutura organizada
     } catch (error) {
         console.error(error);
         return reply.status(500).send({ message: 'Internal Server Error' });

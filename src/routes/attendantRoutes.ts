@@ -5,7 +5,8 @@ import {
     patchAttendant,
     getAttendants,
     generateToken,
-    getAttendantId
+    getAttendantId,
+    listCallsByStatus
 } from 'src/controllers/attendantControlller';
 
 const attendantRoutes = async (fastify: FastifyInstance) => {
@@ -14,9 +15,8 @@ const attendantRoutes = async (fastify: FastifyInstance) => {
     fastify.delete('/attendants/:attendantId', softDeleteAttendant);
     fastify.patch('/attendants/:attendantId', patchAttendant);
     fastify.get('/attendants/:attendantId/token', generateToken);
-    fastify.get('/attendants/:attendantId', getAttendantId); 
-
-   
+    fastify.get('/attendants/:attendantId', getAttendantId);
+    fastify.get('/attendants/:attendantId/calls', listCallsByStatus);
 };
 
 export default attendantRoutes;

@@ -1,7 +1,7 @@
 import prisma from "../database/prismaClient";
 import { ZPersonSchema } from "../schemas/personSchema";
 import { ZPhonesArraySchema } from "../schemas/phoneSchema";
-import { formatErrorResponse } from "../handlers/errorHandler";
+import { formatErrorResponseHandler } from "../handlers/errorHandler";
 
 // Função para listar pessoas
 export const getPersons = async (request, reply) => {
@@ -50,7 +50,7 @@ export const createPerson = async (request, reply) => {
 
     if (!parseResult.success) {
         console.error(parseResult.error);
-        return reply.status(400).send(formatErrorResponse(parseResult.error)); // Formata a resposta de erro
+        return reply.status(400).send(formatErrorResponseHandler(parseResult.error)); // Formata a resposta de erro
     }
 
     const { name, taxId, phones } = parseResult.data;
@@ -100,7 +100,7 @@ export const addPhonesToPerson = async (request, reply) => {
 
     if (!parseResult.success) {
         console.error(parseResult.error);
-        return reply.status(400).send(formatErrorResponse(parseResult.error)); // Formata a resposta de erro
+        return reply.status(400).send(formatErrorResponseHandler(parseResult.error)); // Formata a resposta de erro
     }
 
     const { phones } = parseResult.data;
